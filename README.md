@@ -40,42 +40,91 @@ sudo apt-get install -y \
     mesa-common-dev zstd liblz4-tool
 ```
 
-## セットアップ手順
+## ビルド方法
 
-### 1. 環境のセットアップ
+このプロジェクトは3つの方法でビルドできます：
+
+### 方法1: GitHub Actions で自動ビルド（推奨）
+
+**最も簡単！** タグをプッシュするだけで自動ビルド＆リリース：
+
 ```bash
-# このリポジトリをクローン（既にクローン済みの場合はスキップ）
-git clone <repository-url>
-cd yocto-pizero
+# タグを作成してプッシュ
+git tag v1.0.0
+git push origin v1.0.0
 
+# 数時間後、Releases からイメージをダウンロード
+```
+
+- ビルド時間: 3〜6時間（初回）、1〜3時間（2回目以降）
+- 必要なもの: GitHubアカウントのみ
+- 詳細: [GitHub Actions ガイド](docs/GITHUB_ACTIONS.md)
+
+### 方法2: Docker でビルド（クリーン環境）
+
+**ホストを汚さない！** Dockerコンテナ内でビルド：
+
+```bash
+# 簡単ビルド
+./docker-build.sh
+
+# またはステップバイステップ
+docker-compose build
+./docker-build.sh --setup
+./docker-build.sh --build-only
+```
+
+- 前提条件: Docker, docker-compose
+- ビルド時間: 2〜6時間
+- 詳細: [Docker ビルドガイド](docs/DOCKER_BUILD.md)
+
+### 方法3: ネイティブビルド（従来の方法）
+
+**直接ビルド：** ホストシステムに直接セットアップ：
+
+#### 前提条件
+- Ubuntu 20.04/22.04 または Debian 11/12
+- 最小 50GB の空きディスク容量
+- 最小 8GB RAM (推奨: 16GB以上)
+
+#### 必要なパッケージ
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    gawk wget git diffstat unzip texinfo gcc build-essential \
+    chrpath socat cpio python3 python3-pip python3-pexpect \
+    xz-utils debianutils iputils-ping python3-git python3-jinja2 \
+    libegl1-mesa libsdl1.2-dev pylint xterm python3-subunit \
+    mesa-common-dev zstd liblz4-tool
+```
+
+#### セットアップとビルド
+```bash
 # セットアップスクリプトを実行
 ./setup.sh
+
+# ビルド実行
+./build.sh rpi-zero-custom-image
 ```
 
-### 2. ビルド環境の初期化
+詳細: [クイックスタートガイド](docs/QUICKSTART.md)
+
+---
+
+## SDカードへの書き込み
+
+ビルド完了後（どの方法でも）：
+
 ```bash
-# Yocto環境をソース
-source poky/oe-init-build-env build
+# イメージファイルの場所
+# - ネイティブ/Docker: build/tmp/deploy/images/raspberrypi0/
+# - GitHub Actions: Releases からダウンロード
 
-# 設定ファイルは自動的にコピーされます
-```
+# 圧縮ファイルを解凍（.wic.gzの場合）
+gunzip rpi-zero-custom-image-raspberrypi0.wic.gz
 
-### 3. イメージのビルド
-```bash
-# フルビルド（初回は数時間かかります）
-bitbake core-image-minimal
-
-# カスタムイメージをビルド
-bitbake rpi-zero-custom-image
-```
-
-### 4. SDカードへの書き込み
-```bash
-# ビルド完了後、イメージは以下に生成されます
-# build/tmp/deploy/images/raspberrypi0/
-
-# SDカードに書き込み (例: /dev/sdX)
-sudo dd if=build/tmp/deploy/images/raspberrypi0/rpi-zero-custom-image-raspberrypi0.wic of=/dev/sdX bs=4M status=progress
+# SDカードに書き込み（要注意: /dev/sdX を正しいデバイスに置き換える！）
+sudo dd if=rpi-zero-custom-image-raspberrypi0.wic of=/dev/sdX bs=4M status=progress
 sudo sync
 ```
 
@@ -118,7 +167,13 @@ http://<Raspberry-Pi-Zero-IP>/
 ```
 
 ## ドキュメント
-- [クイックスタートガイド](docs/QUICKSTART.md) - セットアップとビルド手順
+
+### ビルド方法
+- [GitHub Actions ガイド](docs/GITHUB_ACTIONS.md) - 自動ビルド＆リリース
+- [Docker ビルドガイド](docs/DOCKER_BUILD.md) - Dockerを使ったビルド
+- [クイックスタートガイド](docs/QUICKSTART.md) - ネイティブビルド手順
+
+### カスタマイズ＆運用
 - [パッケージ管理ガイド](docs/PACKAGE_MANAGEMENT.md) - opkgによるパッケージ管理
 - [カスタマイズガイド](docs/CUSTOMIZATION.md) - イメージのカスタマイズ方法
 - [トラブルシューティング](docs/TROUBLESHOOTING.md) - よくある問題と解決方法

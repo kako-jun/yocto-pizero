@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  yocto-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_NAME: yoctouser
+        USER_UID: 1000
+        USER_GID: 1000
+    image: yocto-pizero-builder:latest
+    container_name: yocto-pizero-builder
+
+    # ボリュームマウント
+    volumes:
+      # プロジェクトディレクトリ
+      - .:/home/yoctouser/yocto-pizero
+      # ダウンロードキャッシュ（再利用可能）
+      - yocto-downloads:/home/yoctouser/yocto-pizero/downloads
+      # sstate-cache（ビルド高速化）
+      - yocto-sstate:/home/yoctouser/yocto-pizero/sstate-cache
+
+    # 環境変数
+    environment:
+      - BB_ENV_PASSTHROUGH_ADDITIONS=MACHINE
+      - MACHINE=raspberrypi0
+
+    # リソース制限（必要に応じて調整）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+
+    # 作業ディレクトリ
+    working_dir: /home/yoctouser/yocto-pizero
+
+    # コンテナを起動したままにする（開発用）
+    tty: true
+    stdin_open: true
+
+# 永続化ボリューム
+volumes:
+  yocto-downloads:
+    driver: local
+  yocto-sstate:
+    driver: local

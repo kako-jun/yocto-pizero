@@ -1,0 +1,227 @@
+name: Build Yocto Image for Raspberry Pi Zero
+
+on:
+  # タグプッシュ時（例: v1.0.0）
+  push:
+    tags:
+      - 'v*'
+
+  # 手動実行
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Image to build'
+        required: false
+        default: 'rpi-zero-custom-image'
+        type: choice
+        options:
+          - rpi-zero-custom-image
+          - core-image-minimal
+
+# ジョブ設定
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    # タイムアウト：6時間（GitHub Actions最大値）
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free up disk space
+        run: |
+          echo "Initial disk usage:"
+          df -h
+
+          # 不要なソフトウェアを削除してディスク容量を確保
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+
+          echo "After cleanup:"
+          df -h
+
+      - name: Install Yocto dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gawk wget git diffstat unzip texinfo gcc build-essential \
+            chrpath socat cpio python3 python3-pip python3-pexpect \
+            xz-utils debianutils iputils-ping python3-git python3-jinja2 \
+            libegl1-mesa libsdl1.2-dev pylint xterm python3-subunit \
+            mesa-common-dev zstd liblz4-tool file
+
+      - name: Setup Git configuration
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: downloads
+          key: yocto-downloads-${{ hashFiles('setup.sh') }}
+          restore-keys: |
+            yocto-downloads-
+
+      - name: Cache sstate
+        uses: actions/cache@v4
+        with:
+          path: sstate-cache
+          key: yocto-sstate-${{ github.sha }}
+          restore-keys: |
+            yocto-sstate-
+
+      - name: Run setup script
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Optimize build configuration for CI
+        run: |
+          # ディスク容量節約のため rm_work を有効化
+          echo 'INHERIT += "rm_work"' >> build/conf/local.conf
+
+          # 並列ビルド設定（GitHub Actionsのコア数に最適化）
+          NPROC=$(nproc)
+          sed -i "s/BB_NUMBER_THREADS ?= \"4\"/BB_NUMBER_THREADS ?= \"${NPROC}\"/" build/conf/local.conf
+          sed -i "s/PARALLEL_MAKE ?= \"-j 4\"/PARALLEL_MAKE ?= \"-j ${NPROC}\"/" build/conf/local.conf
+
+          # イメージサイズを最小化
+          echo 'IMAGE_FSTYPES = "wic wic.gz"' >> build/conf/local.conf
+
+          echo "Build configuration:"
+          cat build/conf/local.conf
+
+      - name: Build Yocto image
+        run: |
+          IMAGE_NAME="${{ github.event.inputs.image_name || 'rpi-zero-custom-image' }}"
+          echo "Building image: ${IMAGE_NAME}"
+
+          source poky/oe-init-build-env build
+
+          # ディスク容量を定期的にチェック
+          (while true; do df -h; sleep 300; done) &
+          MONITOR_PID=$!
+
+          # ビルド実行
+          bitbake ${IMAGE_NAME}
+
+          # モニタリング停止
+          kill $MONITOR_PID || true
+
+      - name: Check build artifacts
+        run: |
+          echo "Build artifacts:"
+          ls -lh build/tmp/deploy/images/raspberrypi0/ || true
+
+          echo "Disk usage after build:"
+          df -h
+
+      - name: Prepare release artifacts
+        id: prepare_artifacts
+        run: |
+          DEPLOY_DIR="build/tmp/deploy/images/raspberrypi0"
+          ARTIFACT_DIR="release-artifacts"
+          mkdir -p ${ARTIFACT_DIR}
+
+          # .wic と .wic.gz ファイルをコピー
+          find ${DEPLOY_DIR} -name "*.wic" -o -name "*.wic.gz" | while read file; do
+            cp "$file" ${ARTIFACT_DIR}/
+          done
+
+          # マニフェストファイルもコピー
+          find ${DEPLOY_DIR} -name "*.manifest" | head -1 | xargs -I {} cp {} ${ARTIFACT_DIR}/ || true
+
+          # ビルド情報ファイルを作成
+          cat > ${ARTIFACT_DIR}/build-info.txt << EOF
+          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Git Commit: ${GITHUB_SHA}
+          Git Ref: ${GITHUB_REF}
+          Image Name: ${{ github.event.inputs.image_name || 'rpi-zero-custom-image' }}
+          Builder: GitHub Actions
+          EOF
+
+          echo "Artifacts prepared:"
+          ls -lh ${ARTIFACT_DIR}/
+
+          # アーティファクト名を出力変数に設定
+          WIC_FILE=$(ls ${ARTIFACT_DIR}/*.wic 2>/dev/null | head -1 | xargs basename)
+          WIC_GZ_FILE=$(ls ${ARTIFACT_DIR}/*.wic.gz 2>/dev/null | head -1 | xargs basename)
+          echo "wic_file=${WIC_FILE}" >> $GITHUB_OUTPUT
+          echo "wic_gz_file=${WIC_GZ_FILE}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yocto-raspberrypi0-image
+          path: release-artifacts/
+          retention-days: 30
+
+      - name: Create Release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-artifacts/*.wic
+            release-artifacts/*.wic.gz
+            release-artifacts/*.manifest
+            release-artifacts/build-info.txt
+          body: |
+            # Raspberry Pi Zero Yocto Image
+
+            ## ビルド情報
+            - ビルド日時: ${{ steps.prepare_artifacts.outputs.build_date }}
+            - コミット: ${{ github.sha }}
+            - イメージ: ${{ github.event.inputs.image_name || 'rpi-zero-custom-image' }}
+
+            ## インストール方法
+
+            1. ダウンロード: `*.wic.gz` ファイルをダウンロード
+            2. 解凍: `gunzip *.wic.gz`
+            3. SDカードに書き込み:
+               ```bash
+               sudo dd if=*.wic of=/dev/sdX bs=4M status=progress
+               sudo sync
+               ```
+
+            ## 含まれる機能
+            - nginx 軽量Webサーバー
+            - SSH サーバー (root, パスワードなし)
+            - opkg パッケージマネージャー
+            - WiFi サポート（USB WiFiアダプタ使用時）
+
+            詳細は [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) を参照してください。
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ${{ github.event.inputs.image_name || 'rpi-zero-custom-image' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "release-artifacts/build-info.txt" ]; then
+            echo "### Build Info" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat release-artifacts/build-info.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Disk Usage" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          df -h >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

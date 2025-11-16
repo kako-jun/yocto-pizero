@@ -1,0 +1,37 @@
+# POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+BBPATH = "${TOPDIR}"
+BBFILES ?= ""
+
+# Yocto Project レイヤー構成
+#
+# このファイルは使用するメタレイヤーを定義します
+# パスは絶対パスまたは ${TOPDIR} からの相対パスで指定してください
+
+BBLAYERS ?= " \
+  ##OEROOT##/meta \
+  ##OEROOT##/meta-poky \
+  ##OEROOT##/meta-yocto-bsp \
+  ##OEROOT##/../meta-openembedded/meta-oe \
+  ##OEROOT##/../meta-openembedded/meta-python \
+  ##OEROOT##/../meta-openembedded/meta-networking \
+  ##OEROOT##/../meta-raspberrypi \
+  ##OEROOT##/../meta-rpi-zero-custom \
+  "
+
+# 注意:
+# - ##OEROOT## は自動的に poky ディレクトリのパスに置換されます
+# - レイヤーの順序は依存関係に影響する場合があります
+# - カスタムレイヤーは通常、最後に配置します
+#
+# レイヤー説明:
+# - meta: OpenEmbedded-Core メタデータ（必須）
+# - meta-poky: Poky リファレンスディストリビューション
+# - meta-yocto-bsp: Yocto Project BSP
+# - meta-oe: 追加の OpenEmbedded レシピ
+# - meta-python: Python パッケージ
+# - meta-networking: ネットワーク関連パッケージ
+# - meta-raspberrypi: Raspberry Pi サポート（BSP）
+# - meta-rpi-zero-custom: カスタムレイヤー（このプロジェクト固有）

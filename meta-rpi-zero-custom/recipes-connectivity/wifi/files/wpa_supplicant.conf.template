@@ -1,0 +1,40 @@
+# wpa_supplicant 設定テンプレート
+#
+# WiFi接続設定を行うには:
+# 1. このファイルを /etc/wpa_supplicant/wpa_supplicant.conf にコピー
+# 2. YOUR_SSID と YOUR_PASSWORD を実際の値に置き換え
+# 3. wpa_supplicant を再起動
+#
+# コマンド例:
+#   cp /etc/wpa_supplicant/wpa_supplicant.conf.template /etc/wpa_supplicant/wpa_supplicant.conf
+#   nano /etc/wpa_supplicant/wpa_supplicant.conf
+#   systemctl restart wpa_supplicant
+#
+
+ctrl_interface=/var/run/wpa_supplicant
+ctrl_interface_group=0
+update_config=1
+country=JP
+
+# WiFi ネットワーク設定
+network={
+    ssid="YOUR_SSID"
+    psk="YOUR_PASSWORD"
+    key_mgmt=WPA-PSK
+    priority=1
+}
+
+# 別のネットワークを追加する場合（オプション）
+# network={
+#     ssid="ANOTHER_SSID"
+#     psk="ANOTHER_PASSWORD"
+#     key_mgmt=WPA-PSK
+#     priority=2
+# }
+
+# オープンネットワーク（パスワードなし）の例
+# network={
+#     ssid="OPEN_NETWORK"
+#     key_mgmt=NONE
+#     priority=0
+# }

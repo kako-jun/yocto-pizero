@@ -1,0 +1,43 @@
+# Yocto Project Build Files
+# これらのディレクトリは非常に大きくなるため、gitに含めません
+
+# Yocto レイヤー（git submodule または手動クローン）
+poky/
+meta-raspberrypi/
+meta-openembedded/
+
+# ビルドディレクトリ
+build/
+
+# ダウンロードキャッシュ
+downloads/
+
+# 共有ステートキャッシュ
+sstate-cache/
+
+# 一時ファイル
+tmp/
+*.tmp
+
+# エディタ関連
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# IDE設定
+.vscode/
+.idea/
+*.code-workspace
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# ログファイル
+*.log
+
+# その他
+*.orig
+*.rej

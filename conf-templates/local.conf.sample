@@ -1,0 +1,94 @@
+#
+# Local configuration for Raspberry Pi Zero build
+#
+# このファイルは build/conf/local.conf にコピーして使用してください
+#
+
+# マシンの指定（Raspberry Pi Zero用）
+MACHINE = "raspberrypi0"
+
+# ディストリビューション設定
+DISTRO ?= "poky"
+
+# パッケージマネージャー（opkg: 軽量、apt: Debian互換）
+PACKAGE_CLASSES ?= "package_ipk"
+
+# 追加のイメージ機能
+EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
+
+# ユーザー設定
+# 注意: debug-tweaksを有効にすると、rootパスワードなしでログインできます
+# 本番環境では USER_CLASSES を設定してパスワードを設定してください
+
+# 並列ビルド設定（システムのCPUコア数に応じて調整）
+# 例: 4コアの場合は BB_NUMBER_THREADS = "4", PARALLEL_MAKE = "-j 4"
+BB_NUMBER_THREADS ?= "4"
+PARALLEL_MAKE ?= "-j 4"
+
+# ダウンロードディレクトリ（共有可能）
+DL_DIR ?= "${TOPDIR}/../downloads"
+
+# 共有ステートキャッシュ
+SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
+
+# 一時ファイルディレクトリ
+TMPDIR = "${TOPDIR}/tmp"
+
+# ディスクスペース監視（MB単位）
+BB_DISKMON_DIRS ??= "\
+    STOPTASKS,${TMPDIR},1G,100K \
+    STOPTASKS,${DL_DIR},1G,100K \
+    STOPTASKS,${SSTATE_DIR},1G,100K \
+    STOPTASKS,/tmp,100M,100K \
+    HALT,${TMPDIR},100M,1K \
+    HALT,${DL_DIR},100M,1K \
+    HALT,${SSTATE_DIR},100M,1K \
+    HALT,/tmp,10M,1K"
+
+# Raspberry Pi Zero 固有の設定
+
+# GPU メモリ割り当て（MB）- Webサーバー用途では最小限に
+GPU_MEM = "16"
+
+# WiFi を有効化（USB WiFiアダプタ使用時）
+# 注: Raspberry Pi Zero 初代は内蔵WiFi/Bluetoothなし
+DISTRO_FEATURES:append = " wifi"
+
+# ファームウェア追加
+# MACHINE_FEATURES:append = " wifi"
+
+# Linux カーネル設定
+# カーネルモジュールを追加する場合はここに記述
+# MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS += "kernel-modules"
+
+# systemd を使用する場合（デフォルトはSysVinit）
+# DISTRO_FEATURES:append = " systemd"
+# VIRTUAL-RUNTIME_init_manager = "systemd"
+# DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
+# VIRTUAL-RUNTIME_initscripts = ""
+
+# ライセンス設定
+LICENSE_FLAGS_ACCEPTED = "commercial"
+
+# SDK設定（クロス開発環境が必要な場合）
+# SDKMACHINE ?= "x86_64"
+
+# その他の便利な設定
+
+# RM_OLD_IMAGE = "1"  # 古いイメージを自動削除
+# INHERIT += "rm_work"  # ビルド後に作業ディレクトリを削除（ディスク容量節約）
+
+# ネットワークプロキシ設定（必要な場合）
+# http_proxy = "http://proxy.example.com:8080"
+# https_proxy = "http://proxy.example.com:8080"
+# ftp_proxy = "http://proxy.example.com:8080"
+# no_proxy = "localhost,127.0.0.1"
+
+# パッケージフィード設定（デプロイ後のパッケージ更新用）
+# PACKAGE_FEED_URIS = "http://example.com/packages"
+
+# イメージのホスト名
+hostname:pn-base-files = "raspizero"
+
+# タイムゾーン設定
+DEFAULT_TIMEZONE = "Asia/Tokyo"

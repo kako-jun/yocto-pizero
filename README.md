@@ -11,13 +11,32 @@ Raspberry Pi Zero (初代) 向けのカスタマイズされたYocto Linuxビル
 - CPU: ARM11 (BCM2835) 1GHz
 - RAM: 512MB
 
-### カスタマイズ内容
-- `core-image-minimal` ベースの超軽量イメージ
-- **nginx** 軽量Webサーバー
-- SSH 有効化（リモート管理用）
-- WiFi サポート（USB WiFiアダプタ使用時）
-- **opkg** パッケージマネージャー（起動後のパッケージ追加が可能）
-- 最小限のシステムツール（nano, htop）
+### 利用可能なイメージ
+
+このプロジェクトには3つの特化イメージがあります：
+
+#### 1. **rpi-zero-custom-image** - 軽量Webサーバー
+- nginx 軽量Webサーバー
+- SSH リモートアクセス
+- opkg パッケージマネージャー
+- 最小限のツール（nano, htop）
+
+#### 2. **rpi-zero-vpn-gateway** - VPNゲートウェイ
+- WireGuard VPN（高速・モダン）
+- OpenVPN（互換性重視）
+- ダイナミックDNS対応（DuckDNS, No-IP等）
+- ファイアウォール（iptables）
+- 📄 [VPNセットアップガイド](docs/VPN_SETUP.md)
+
+#### 3. **rpi-zero-webcam-server** - USB Webカメラサーバー
+- USB Webカメラサポート（V4L2/UVC）
+- ライブストリーミング（mjpg-streamer）
+- タイムラプス撮影（ffmpeg）
+- Cloudflare Tunnel（CGNAT環境対応）
+- Webギャラリー（nginx）
+- 📄 [Webカメラセットアップガイド](docs/WEBCAM_SETUP.md)
+
+**どのイメージを選ぶか？** → [イメージ選択ガイド](docs/IMAGE_SELECTION.md)
 
 **注意**: Raspberry Pi Zero 初代には内蔵WiFi/Bluetoothはありません。ネットワーク接続にはUSB WiFiアダプタまたはUSB-Ethernet変換が必要です。
 
@@ -46,14 +65,21 @@ sudo apt-get install -y \
 
 ### 方法1: GitHub Actions で自動ビルド（推奨）
 
-**最も簡単！** タグをプッシュするだけで自動ビルド＆リリース：
+**最も簡単！** GitHubのWebUIからイメージを選択してビルド：
 
+#### 手動実行（イメージ選択可能）
+1. GitHubリポジトリページの **Actions** タブ
+2. **Build Yocto Image for Raspberry Pi Zero** を選択
+3. **Run workflow** → イメージを選択:
+   - `rpi-zero-custom-image` - Webサーバー
+   - `rpi-zero-vpn-gateway` - VPNゲートウェイ
+   - `rpi-zero-webcam-server` - Webカメラサーバー
+4. 数時間後、Artifactsからダウンロード
+
+#### タグプッシュ（自動リリース）
 ```bash
-# タグを作成してプッシュ
 git tag v1.0.0
 git push origin v1.0.0
-
-# 数時間後、Releases からイメージをダウンロード
 ```
 
 - ビルド時間: 3〜6時間（初回）、1〜3時間（2回目以降）
@@ -65,13 +91,18 @@ git push origin v1.0.0
 **ホストを汚さない！** Dockerコンテナ内でビルド：
 
 ```bash
-# 簡単ビルド
+# Webサーバー（デフォルト）
 ./docker-build.sh
 
-# またはステップバイステップ
-docker-compose build
+# VPNゲートウェイ
+./docker-build.sh rpi-zero-vpn-gateway
+
+# Webカメラサーバー
+./docker-build.sh rpi-zero-webcam-server
+
+# ステップバイステップ
 ./docker-build.sh --setup
-./docker-build.sh --build-only
+./docker-build.sh --build-only rpi-zero-vpn-gateway
 ```
 
 - 前提条件: Docker, docker-compose
@@ -103,11 +134,13 @@ sudo apt-get install -y \
 # セットアップスクリプトを実行
 ./setup.sh
 
-# ビルド実行
-./build.sh rpi-zero-custom-image
+# ビルド実行（イメージ指定）
+./build.sh                          # Webサーバー（デフォルト）
+./build.sh rpi-zero-vpn-gateway     # VPNゲートウェイ
+./build.sh rpi-zero-webcam-server   # Webカメラサーバー
 ```
 
-詳細: [クイックスタートガイド](docs/QUICKSTART.md)
+詳細: [クイックスタートガイド](docs/QUICKSTART.md)、[イメージ選択ガイド](docs/IMAGE_SELECTION.md)
 
 ---
 

@@ -16,6 +16,8 @@ on:
         type: choice
         options:
           - rpi-zero-custom-image
+          - rpi-zero-vpn-gateway
+          - rpi-zero-webcam-server
           - core-image-minimal
 
 # ジョブ設定

@@ -28,12 +28,15 @@ usage() {
     echo "使用方法: $0 [イメージ名]"
     echo ""
     echo "イメージ名:"
-    echo "  core-image-minimal     - 最小限のイメージ（デフォルト）"
-    echo "  rpi-zero-custom-image  - カスタマイズされたイメージ"
+    echo "  rpi-zero-custom-image   - nginx Webサーバー（デフォルト）"
+    echo "  rpi-zero-vpn-gateway    - VPNゲートウェイ（WireGuard/OpenVPN）"
+    echo "  rpi-zero-webcam-server  - USB Webカメラサーバー"
+    echo "  core-image-minimal      - 最小限のイメージ"
     echo ""
     echo "例:"
-    echo "  $0"
-    echo "  $0 rpi-zero-custom-image"
+    echo "  $0                          # Webサーバーイメージ（デフォルト）"
+    echo "  $0 rpi-zero-vpn-gateway     # VPNゲートウェイ"
+    echo "  $0 rpi-zero-webcam-server   # Webカメラサーバー"
     exit 1
 }
 
@@ -44,8 +47,8 @@ if [ ! -d "poky" ]; then
     exit 1
 fi
 
-# イメージ名の指定（デフォルト: core-image-minimal）
-IMAGE_NAME=${1:-core-image-minimal}
+# イメージ名の指定（デフォルト: rpi-zero-custom-image）
+IMAGE_NAME=${1:-rpi-zero-custom-image}
 
 echo_info "========================================="
 echo_info "Yocto Project ビルド開始"

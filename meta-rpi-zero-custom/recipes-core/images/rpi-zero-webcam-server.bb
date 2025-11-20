@@ -42,7 +42,6 @@ IMAGE_INSTALL:append = " \
 # 画像・動画処理
 IMAGE_INSTALL:append = " \
     ffmpeg \
-    imagemagick \
     "
 
 # Webサーバー（静的ファイル配信・ギャラリー）

@@ -65,8 +65,15 @@ if [ ! -d "${CUSTOM_LAYER}" ]; then
     mkdir -p ${CUSTOM_LAYER}/recipes-core/images
     mkdir -p ${CUSTOM_LAYER}/recipes-example/hello
     mkdir -p ${CUSTOM_LAYER}/recipes-connectivity/wifi
+    echo_info "カスタムレイヤーディレクトリの作成が完了しました"
+else
+    echo_warn "${CUSTOM_LAYER} ディレクトリが既に存在します"
+fi
 
-    # layer.conf の作成
+# layer.conf の作成（存在しない場合のみ）
+if [ ! -f "${CUSTOM_LAYER}/conf/layer.conf" ]; then
+    echo_info "layer.conf を作成しています..."
+    mkdir -p ${CUSTOM_LAYER}/conf
     cat > ${CUSTOM_LAYER}/conf/layer.conf << 'EOF'
 # Custom layer for Raspberry Pi Zero
 
@@ -82,10 +89,9 @@ BBFILE_PRIORITY_rpi-zero-custom = "10"
 LAYERDEPENDS_rpi-zero-custom = "core raspberrypi"
 LAYERSERIES_COMPAT_rpi-zero-custom = "kirkstone"
 EOF
-
-    echo_info "カスタムレイヤーの作成が完了しました"
+    echo_info "layer.conf の作成が完了しました"
 else
-    echo_warn "${CUSTOM_LAYER} ディレクトリが既に存在します。スキップします"
+    echo_warn "${CUSTOM_LAYER}/conf/layer.conf が既に存在します。スキップします"
 fi
 
 # 5. ビルドディレクトリの準備

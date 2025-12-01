@@ -42,3 +42,4 @@ Thumbs.db
 *.orig
 *.rej
 .claude/settings.local.json
+.serena/

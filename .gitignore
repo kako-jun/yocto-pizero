@@ -41,3 +41,4 @@ Thumbs.db
 # その他
 *.orig
 *.rej
+.claude/settings.local.json
